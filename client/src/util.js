@@ -26,13 +26,6 @@ export const recvAmt = ({ amount_msat: expected, amount_received_msat: actual })
 // Parse "listpeers" to get all channels as a list of (peer,channel) tuples
 export const getChannels = peers => [].concat(...peers.map(peer => peer.channels.map(chan => ({ peer, chan }))))
 
-// Parse the `sat`-suffixed amount string fields into numbers
-export const parsePayment = p => ({
-  ...p
-  , amount_msat: p.amount_msat != null ? p.amount_msat : p.amount_msat ? +p.amount_msat : null
-  , amount_sent_msat: p.amount_sent_msat ? +p.amount_sent_msat : null
-})
-
 export const combine = obj => {
   const keys = Object.keys(obj).map(k => k.replace(/\$$/, ''))
   return O.combineLatest(...Object.values(obj), (...xs) =>

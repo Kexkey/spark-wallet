@@ -1,6 +1,6 @@
 import big from 'big.js'
 import { Observable as O } from './rxjs'
-import { dbg, getChannels, formatAmt, recvAmt, parsePayment, combine, isConnError, only } from './util'
+import { dbg, getChannels, formatAmt, recvAmt, combine, isConnError, only } from './util'
 
 const msatbtc = big(100000000000) // msat in 1 btc
 
@@ -11,7 +11,7 @@ const
 
 , sumOuts = outs =>
     outs.filter(o => o.status === 'confirmed')
-        .reduce((T, o) => T + o.amount_msat * 1000, 0)
+        .reduce((T, o) => T + o.amount_msat, 0)
 
 , fmtAlert = (s, unitf) => s.replace(/@\{\{(\d+)\}\}/g, (_, msat) => unitf(msat))
 
@@ -37,9 +37,9 @@ module.exports = ({ dismiss$, togExp$, togTheme$, togUnit$, page$, goHome$, goRe
 
   // Config options
     conf     = (name, def, list) => savedConf$.first().map(c => c[name] || def).map(list ? idx(list) : idn)
-  , expert$  = conf('expert', false)        .concat(togExp$)  .scan(x => !x)
+  , expert$  = conf('expert', true)        .concat(togExp$)  .scan(x => !x)
   , theme$   = conf('theme', 'dark', themes).concat(togTheme$).scan(n => (n+1) % themes.length).map(n => themes[n])
-  , unit$    = conf('unit',  'bits',  units).concat(togUnit$) .scan(n => (n+1) % units.length) .map(n => units[n])
+  , unit$    = conf('unit',  'BTC',  units).concat(togUnit$) .scan(n => (n+1) % units.length) .map(n => units[n])
   , conf$    = combine({ expert$, theme$, unit$ })
 
   // Currency & unit conversion handling
@@ -106,7 +106,7 @@ module.exports = ({ dismiss$, togExp$, togTheme$, togUnit$, page$, goHome$, goRe
   // Periodically re-sync from listpays, continuously patch with known outgoing
   // payments and payment status update notifications
   , freshPays$ = O.merge(
-      payments$.map(payments => _ => payments.map(parsePayment))
+      payments$.map(payments => _ => payments)
     , paySent$.map(pay => payments => payments && mergePayUpdates(payments, [ pay ]))
     , payFail$.map(fail => payments => payments && markFailed(payments, fail.pay.payment_hash))
     , payUpdates$.map(updates => payments => payments && mergePayUpdates(payments, updates))
@@ -194,7 +194,7 @@ module.exports = ({ dismiss$, togExp$, togTheme$, togUnit$, page$, goHome$, goRe
 function mergePayUpdates(payments, updates) {
   const updated = new Set(updates.map(p => p.payment_hash))
   return [ ...payments.filter(p => !updated.has(p.payment_hash))
-         , ...updates.map(parsePayment) ]
+         , ...updates ]
 }
 
 const markFailed = (payments, payment_hash) => payments.map(pay =>
